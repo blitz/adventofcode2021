@@ -6,4 +6,5 @@ members = [
 
 	# Binaries
 	"day1",
+	"day2",
 ]
