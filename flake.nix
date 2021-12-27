@@ -12,9 +12,13 @@
     };
     flake-compat-ci.url = "github:hercules-ci/flake-compat-ci";
 
+    mozillapkgs = {
+      url = "github:mozilla/nixpkgs-mozilla";
+      flake = false;
+    };
   };
-  
-  outputs = { self, nixpkgs, utils, naersk, flake-compat, flake-compat-ci }:
+
+  outputs = { self, nixpkgs, utils, naersk, mozillapkgs, flake-compat, flake-compat-ci }:
     {
       # For Hercules CI.
       ciNix = flake-compat-ci.lib.recurseIntoFlakeWith {
@@ -29,7 +33,20 @@
     } //
     utils.lib.eachDefaultSystem (system: let
       pkgs = nixpkgs.legacyPackages."${system}";
-      naersk-lib = naersk.lib."${system}";
+
+
+      # Get a specific rust version
+      mozilla = pkgs.callPackage (mozillapkgs + "/package-set.nix") {};
+      rust = (mozilla.rustChannelOf {
+        date = "2020-12-24"; # get the current date with `date -I`
+        channel = "nightly";
+        sha256 = "sha256-ltQYo4AYmpD4dJV9WXDf0VSwj2cxilS1hrjTsj7Fcng=";
+      }).rust;
+
+      naersk-lib = naersk.lib."${system}".override {
+        cargo = rust;
+        rustc = rust;
+      };
     in {
       # `nix build`
       packages.adventofcode2021 = naersk-lib.buildPackage {
